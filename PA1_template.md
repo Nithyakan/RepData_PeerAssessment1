@@ -32,9 +32,8 @@ list.files()
 ```
 
 ```
-## [1] "~$structions.docx"  "~WRL1528.tmp"       "activity.csv"      
-## [4] "PA_1.R"             "PA1_template.html"  "PA1_template.md"   
-## [7] "PA1_template.Rmd"   "PA1_template_files"
+## [1] "~$structions.docx" "~WRL1528.tmp"      "activity.csv"     
+## [4] "PA_1.R"            "PA1_template.Rmd"
 ```
 
 **1) Read in the dataset**
@@ -47,6 +46,13 @@ names(activity)
 
 ```
 ## [1] "steps"    "date"     "interval"
+```
+
+*REMOVE NAs from dataset and create a new dataset without NAs*
+
+```r
+activitydf <- na.omit(activity)
+View(activitydf)
 ```
 
 **Processing the data & Calculating total number of steps taken each day**
@@ -73,15 +79,15 @@ library(dplyr)
 ```
 
 ```r
-activity_new <- activity %>% group_by(date) %>% summarise(sum = sum(steps, na.rm = TRUE))
-View(activity_new)
+activity_perday <- activitydf %>% group_by(date) %>% summarise(sum = sum(steps, na.rm = TRUE))
+View(activity_perday)
 ```
-*Sum column of **activity_new dataframe** shows the total number of steps taken per day *
+*Sum column of **activity_perday dataframe** shows the total number of steps taken per day*
 
 **2) Making a histogram of the total number of steps taken each day**
 
 ```r
-hist(activity_new$sum)
+hist(activity_perday$sum)
 ```
 
 ![](PA1_template_files/figure-html/histdata-1.png)<!-- -->
@@ -89,30 +95,29 @@ hist(activity_new$sum)
 **3) Calculating the mean and median of total number of steps taken per day**
 
 ```r
-activity_newmean <- activity %>% group_by(date) %>% summarise(mean = mean(steps, na.rm = TRUE))
-View(activity_newmean)
-activity_newmedian <- activity %>% group_by(date) %>% summarise(median = median(steps, na.rm = TRUE))
-View(activity_newmedian)
+meanstepsperday <- mean(activity_perday$sum, na.rm = TRUE)
+medainstepsperday <- median(activity_perday$sum, na.rm = TRUE)
 ```
+*Mean of total number of steps taken per day is 1.0766189\times 10^{4} and median of total number of steps taken per day is 10765*
 
+**4) To make a time series plot of the average number of steps taken across days by interval (meaninterval),**
+**we calculate meaninterval first for a total of 288 intervals**
 
-**4) To make a time series plot of the average number of steps taken across days by interval (mean1),**
-**we calculate mean1 first for a total of 288 intervals**
-
-*Average number of steps taken across days by interval (mean1)*
+*Average number of steps taken across days by interval (meaninterval)*
 
 ```r
-activity_newmean1 <- activity %>% group_by(interval) %>% summarise(mean1 = mean(steps, na.rm = TRUE))
-View(activity_newmean1)
+activitymean_perinterval <- activitydf %>% group_by(interval) %>% summarise(meaninterval = mean(steps, na.rm = TRUE))
+View(activitymean_perinterval)
 ```
-*mean1 column of **activity_newmean1 dataframe** shows the average number of steps taken per day*
+*meaninterval column of **activitymean_perinterval dataframe** shows the average number of steps taken per day*
 
 
-*Plot with x axis = 5 minute interval; y axis = mean1 (average number of steps taken,*
+*Plot with x axis = 5 minute interval; y axis = meaninterval (average number of steps taken,*
 *averaged across all days)*
 
 ```r
-plot(activity_newmean1$interval, activity_newmean1$mean1, type = "l", col = "red", main = "Average number of steps per 5-min interval across all days")
+plot(activitymean_perinterval$interval, activitymean_perinterval$meaninterval, type = "l", col = "red", 
+     main = "Average number of steps per 5-min interval across all days")
 ```
 
 ![](PA1_template_files/figure-html/timeseriesplotacrossdays-1.png)<!-- -->
@@ -124,16 +129,8 @@ plot(activity_newmean1$interval, activity_newmean1$mean1, type = "l", col = "red
 **5) Finding the 5-minute interval that, on average, contains the maximum number of steps**
 
 ```r
-  which.max(activity_newmean1$mean1)
-```
-
-```
-## [1] 104
-```
-
-```r
-  act <- activity_newmean1[104,]
-  ans <-act$interval
+  maxindex <- which.max(activitymean_perinterval$meaninterval)
+  maxinterval <- activitymean_perinterval[maxindex,]
 ```
 *The 5-minute interval that contains maximum number of steps is 835*
 
@@ -143,9 +140,9 @@ To calculate the total number of missing values in the dataset (i.e. the total n
 we can code to find out the total number of rows without NAs as follows.
 
 ```r
-  activitysubset <- subset(activity, steps != "NA")
+  totalmissing <- nrow(subset(activity, is.na(activity)))
 ```
-*We have 15,264 rows with observations without NA values. Therefore, we have 2,304 rows with NAs*
+*We have 2304 rows with NAs*
   
   
 **Devising a strategy for filling in all of the missing values in the dataset**  
@@ -156,21 +153,21 @@ we can code to find out the total number of rows without NAs as follows.
   activityNA <- activity[rowSums(is.na(activity)) > 0,]
   View(activityNA)
 ```
-*activityNA dataframe has 2,304 observations.*
+*activityNA dataframe has 2304 observations.*
 
 
 
 ```r
   activitynotNA <- activity[rowSums(is.na(activity)) == 0,]
 ```
-*activitynotNA dataframe has 15,264 observations.*
+*activitynotNA dataframe has 15264 observations.*
 
 
-*Merge activityNA dataframe (has 2304 rows with NAs only) and activity_newmean1*
+*Merge activityNA dataframe (has 2304 rows with NAs only) and activitymean_perinterval*
 *dataframe using interval variable common to both datasets* 
 
 ```r
-  mergeddata <- merge(activityNA, activity_newmean1, by.x = "interval", by.y = "interval")
+  mergeddata <- merge(activityNA, activitymean_perinterval, by.x = "interval", by.y = "interval")
 ```
   
   
@@ -178,7 +175,7 @@ we can code to find out the total number of rows without NAs as follows.
 Using ifelse function we use a logical object(is.na()) to replace NAs in steps variable of mergeddata dataframe
 
 ```r
-  mergeddata$steps <- ifelse(is.na(mergeddata$steps), mergeddata$mean1 , mergeddata$steps)
+  mergeddata$steps <- ifelse(is.na(mergeddata$steps), mergeddata$meaninterval , mergeddata$steps)
 ```
  
   
@@ -188,19 +185,11 @@ Using ifelse function we use a logical object(is.na()) to replace NAs in steps v
   mergeddata1 <- select(mergeddata, interval, steps, date)
 ```
 
-  
-*Round the steps variable*
 
-```r
-  mergeddata1$steps <- round(mergeddata1$steps)
-```
-
-  
 *Create new dataset = original dataset with imputed values- rbind*
 
 ```r
   activity_new1 <- rbind(mergeddata1,activitynotNA)
-  View(activity_new1)
 ```
 *activity_new1 dataframe has 17,568 observations with imputed values for the steps variable*
 
@@ -209,7 +198,6 @@ Using ifelse function we use a logical object(is.na()) to replace NAs in steps v
 
 ```r
   activity_new2 <- arrange(activity_new1,date)
-  View(activity_new2)
 ```
  
   
@@ -219,15 +207,14 @@ Using ifelse function we use a logical object(is.na()) to replace NAs in steps v
 *Calculate total number of steps taken each day after missing values are imputed*
 
 ```r
-  activity_new3 <- activity_new2 %>% group_by(date) %>% summarise(sum = sum(steps, na.rm = TRUE))
-  View(activity_new3)
+  activity_perdaynew<- activity_new2 %>% group_by(date) %>% summarise(sum = sum(steps, na.rm = TRUE))
 ```
   
 *Making a histogram of the new dataframe having total number of steps taken each day*
 *in the sum column of activity_new3 dataframe*
 
 ```r
-  hist(activity_new3$sum)
+  hist(activity_perdaynew$sum)
 ```
 
 ![](PA1_template_files/figure-html/histnewdata-1.png)<!-- -->
@@ -235,13 +222,13 @@ Using ifelse function we use a logical object(is.na()) to replace NAs in steps v
 *calculate the mean and median of total number of steps taken per day across intervals*
 
 ```r
-  activity_new2mean <- activity_new2 %>% group_by(date) %>% summarise(mean = mean(steps, na.rm = TRUE))
-  activity_new2median <- activity_new2 %>% group_by(date) %>% summarise(median = median(steps, na.rm = TRUE))
+  meanstepsperdaynew <- mean(activity_perdaynew$sum, na.rm = TRUE)
+  medainstepsperdaynew <- median(activity_perdaynew$sum, na.rm = TRUE)
 ```
- 
-These values (mean and median) differ from the estimates from the first part of the assignment
+*Mean of total number of steps taken per day is 1.0766189\times 10^{4} and median of total number of steps taken per day is 1.0766189\times 10^{4}*
+These values (mean and median) do not differ from the estimates from the first part of the assignment
 (ie, the dataframe with NA values. The impact of imputing missing data on the estimates of the 
-total daily number of steps is that the estimates on those days now show a mean of 37.3680556 steps and median of 34.5.
+total daily number of steps increases.
 
 
 **8)Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends**
@@ -297,15 +284,14 @@ total daily number of steps is that the estimates on those days now show a mean 
 *Variable wDay (factor variable with 2 levels) column is added to activity_new2 dataframe*
 
 
-*To plot with x axis = 5 minute interval; y axis = mean1 (average number of steps taken*
+*To plot with x axis = 5 minute interval; y axis = meaninterval (average number of steps taken*
 *averaged across all days), calculate:*
 
 *Average number of steps (rounded) taken per 5-minute interval across weekdays and weekends:total=576 (288+288)intervals*
 
 ```r
-  activity_new2mean1 <- activity_new2 %>% group_by(wDay,interval) %>% 
-      summarise(mean1 = round(mean(steps, na.rm = TRUE)))
-  View(activity_new2mean1)
+  activity_new2meaninterval <- activity_new2 %>% group_by(wDay,interval) %>% 
+      summarise(meaninterval = mean(steps, na.rm = TRUE))
 ```
 
 
@@ -314,7 +300,7 @@ total daily number of steps is that the estimates on those days now show a mean 
 
 ```r
   library(lattice)
-  xyplot(mean1 ~ interval | wDay, data = activity_new2mean1, 
+  xyplot(meaninterval ~ interval | wDay, data = activity_new2meaninterval, 
          main="Mean steps per 5-min interval across weekdays and weekends",  
          xlab="Interval",ylab="Average number of steps",
          layout=c(1, 2), type = "l") 
@@ -323,17 +309,17 @@ total daily number of steps is that the estimates on those days now show a mean 
 ![](PA1_template_files/figure-html/latticeplot-1.png)<!-- -->
 
 ```r
-  summary(activity_new2mean1)
+  summary(activity_new2meaninterval)
 ```
 
 ```
-##       wDay        interval          mean1       
-##  weekend:288   Min.   :   0.0   Min.   :  0.00  
-##  weekday:288   1st Qu.: 588.8   1st Qu.:  2.00  
-##                Median :1177.5   Median : 28.00  
-##                Mean   :1177.5   Mean   : 38.98  
-##                3rd Qu.:1766.2   3rd Qu.: 61.00  
-##                Max.   :2355.0   Max.   :230.00
+##       wDay        interval       meaninterval    
+##  weekend:288   Min.   :   0.0   Min.   :  0.000  
+##  weekday:288   1st Qu.: 588.8   1st Qu.:  2.047  
+##                Median :1177.5   Median : 28.133  
+##                Mean   :1177.5   Mean   : 38.988  
+##                3rd Qu.:1766.2   3rd Qu.: 61.263  
+##                Max.   :2355.0   Max.   :230.378
 ```
 
 From the above panel plot, we may infer that there are multiple peaks distributed throughout the weekend, 
